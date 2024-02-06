@@ -65,17 +65,68 @@ async def twentyfour(ctx: Context):
 
 	await ctx.send_msg(f"Current time in 24h: {twenty_four_clock}")
 
-@bot.command(name="timezone")
-async def timezoneconverter(ctx: Context, *time: str, timezone: str = "utc", to_timezone: str = "utc"):
-	from datetime import datetime
+import datetime
+from dateutil import tz
 
-	time = ' '.join(time)
-	
-	from pytz import timezone
-	from_zone = timezone(timezone)
-	to_zone = timezone(to_timezone)
-	utc_time = datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
-	from_zone.localize(utc_time).astimezone(to_zone)
+@bot.command(name="convert_time")
+async def convert_time(ctx: Context, time_str: str, from_tz_str: str, to_tz_str: str):
+    try:
+        from_tz = tz.gettz(from_tz_str)
+        to_tz = tz.gettz(to_tz_str)
+
+        # Parse the time string into a datetime object.
+        time_obj = datetime.datetime.strptime(time_str, "%H:%M")
+        time_obj = time_obj.replace(tzinfo=from_tz)
+
+        # Convert the time to the target timezone.
+        converted_time = time_obj.astimezone(to_tz)
+
+        await ctx.send_msg(f'The time {time_str} in {from_tz_str} is {converted_time.strftime("%H:%M")} in {to_tz_str}.')
+    except OSError as e:
+        print(f"An OSError occurred: {e}")
+
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
+
+#Load pre-trained model and tokenizer
+tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+model = GPT2LMHeadModel.from_pretrained("gpt2")
+
+from collections import defaultdict
+
+# Create a dictionary to keep track of the last time a user used the command
+last_command_time = defaultdict(int)
+
+import urllib.parse
+
+@bot.command(name="continue")
+async def continue_text(ctx: Context, *message: str):
+    text = ' '.join(message)
+    text = text.replace('@', 'AT')
+    inputs = tokenizer.encode(text, return_tensors='pt')
+
+    outputs = model.generate(inputs, max_length=150, num_return_sequences=1, do_sample=True, temperature=0.7)
+    generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    await ctx.send_msg(generated_text)
+
+import random
+
+@bot.command(name="rps")
+async def play_rps(ctx: Context, user_choice: str):
+    """This function plays a game of rock-paper-scissors with the user"""
+    bot_choices = ['rock', 'paper', 'scissors']
+    bot_choice = random.choice(bot_choices)
+
+    if user_choice not in bot_choices:
+        await ctx.send_msg("Invalid choice. Please choose rock, paper, or scissors.")
+        return
+
+    if user_choice == bot_choice:
+        await ctx.send_msg(f"Draw! We both chose {bot_choice}.")
+    elif (user_choice == 'rock' and bot_choice == 'scissors') or (user_choice == 'scissors' and bot_choice == 'paper') or (user_choice == 'paper' and bot_choice == 'rock'):
+        await ctx.send_msg(f"You win! Your {user_choice} beats my {bot_choice}.")
+    else:
+        await ctx.send_msg(f"I win! My {bot_choice} beats your {user_choice}.")
 
 # noinspection PyIncorrectDocstring
 @bot.command(name="logs")
@@ -172,19 +223,13 @@ class Gpt2(Cog):
 		await ctx.send_msg("FOW SOME WEASON THIS SPECIFIC COG DOESN'T WOWK. >w< USE @Ultanium gpt2 INSTEAD")
 		
 
-async def welcome_post(ctx: Context):
-	await ctx.send_msg("Uwtanyium Bot by DiffewentDance8 has nyow *whispers to self* been woaded?!!")
-
-async def blaze(ctx: Context):
-	await ctx.send_msg("Blaze >> Meower")
-
 @bot.event
 async def login(token):
 	assert await bot.get_chat("9bf5bddd-cd1a-4c0d-a34c-31ae554ed4a7").fetch() is not None
 	assert await bot.get_chat("9bf5bddd").fetch() is None
 	assert await PartialUser(bot.user.username, bot).fetch() is not None
 	assert await PartialUser("A" * 21, bot).fetch() is None
-	welcome_post()
+
 
 @bot.listen(CallBackIds.message)
 async def on_message(message: Post):
@@ -198,17 +243,5 @@ bot.register_cog(Uwuify(bot))
 bot.register_cog(GoogleContiue(bot))
 bot.register_cog(Gpt2(bot))
 bot.register_cog(HelpExt(bot, disable_command_newlines=True))
-
-@bot.command(name="maintenance")
-async def post_and_leave(ctx: Context):
-	# Add anti-bad measures
-	if ctx.user.username == "DifferentDance8":
-		# Post the message
-		await ctx.send_msg("DiffewentDance8 is just *whispers to self* d-d-doing some m-maintenyance wowk on me, and as a w-wesuwt of that I wiww be offwinye fow a bit. *whispers to self* Don't wowwy, I'ww be back in a few minyutes.")
-		# Wait 2 seconds
-		time.sleep(5)
-		exit()
-	else:
-		await ctx.send_msg("You do nyot have pewmission t-to inyitiate m-maintenyance.")
 
 bot.run(env["ultusername"], env["ultpassword"])
