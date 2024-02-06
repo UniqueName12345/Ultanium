@@ -65,6 +65,18 @@ async def twentyfour(ctx: Context):
 
 	await ctx.send_msg(f"Current time in 24h: {twenty_four_clock}")
 
+@bot.command(name="timezone")
+async def timezoneconverter(ctx: Context, *time: str, timezone: str = "utc", to_timezone: str = "utc"):
+	from datetime import datetime
+
+	time = ' '.join(time)
+	
+	from pytz import timezone
+	from_zone = timezone(timezone)
+	to_zone = timezone(to_timezone)
+	utc_time = datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
+	from_zone.localize(utc_time).astimezone(to_zone)
+
 # noinspection PyIncorrectDocstring
 @bot.command(name="logs")
 async def get_logs(ctx: Context, *args):
